@@ -1,0 +1,6 @@
+.venv
+.vscode
+*.log
+.env
+harvests.code-workspace
+
