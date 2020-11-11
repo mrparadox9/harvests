@@ -7,6 +7,7 @@ import logging
 from dotenv import load_dotenv
 from web3 import Web3
 
+#todo estimate gas
 #get price from AMMs
 
 load_dotenv()
@@ -93,8 +94,7 @@ def stakeDrugs():
 def getTransactionData():
     return {'nonce' : w3.eth.getTransactionCount(account_address),
             'gas' : 200000,
-            'gasPrice' : w3.eth.generateGasPrice()
-            }
+            'gasPrice' : w3.toWei(20, 'gwei')}
 
 def signAndSendTransaction(tx):
     logging.info(f'signing and sending tx{tx}')

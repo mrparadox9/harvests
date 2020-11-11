@@ -1,0 +1,5 @@
+version: '3'
+services:
+  thugs-pipeline:
+    build: .
+    env_file: .env
