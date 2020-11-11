@@ -25,10 +25,9 @@ drugs_token_address = None
 drugs_token_abi = None
 drugs_contract = None
 w3 = None
-log_filename = 'drugs.log'
 log_format = '%(levelname)s:%(asctime)s: %(message)s'
 
-logging.basicConfig(filename=log_filename,level=logging.INFO,format=log_format)
+logging.basicConfig(level=logging.INFO,format=log_format)
 
 #read configs
 with open('./drugs.yaml') as cfg_stream:
@@ -49,7 +48,7 @@ with open('./drugs.yaml') as cfg_stream:
         logging.critical(err)
         sys.exit()
 
-#construct ccontracts
+#construct contracts
 if og_contract_abi and og_contract_address:
     w3=Web3(Web3.HTTPProvider(web3_endpoint))
     og_contract = w3.eth.contract(address=og_contract_address,abi=og_contract_abi)
@@ -64,10 +63,15 @@ def harvest():
         pending_rewards_ether = w3.fromWei(pending_rewards_wei,"ether")
         logging.info(f'pool {pid} pending DRUGS = {pending_rewards_ether}')
         if pending_rewards_ether > min_pool_harvest:
-            logging.info('\tharvesting from pool')
-            tx_data = getTransactionData()
-            tx = og_contract.functions.deposit(pid,0).buildTransaction(tx_data)
-            signAndSendTransaction(tx)
+            if pid == 0:
+                logging.info("harvesting DRUGS from HOES staking (poolid = 0)")
+                stx = og_contract.functions.leaveStaking(0).buildTransaction(getTransactionData())
+                signAndSendTransaction(stx)
+            else:
+                logging.info('\tharvesting from pool')
+                tx_data = getTransactionData()
+                tx = og_contract.functions.deposit(pid,0).buildTransaction(tx_data)
+                signAndSendTransaction(tx)
 
 def ensureDrugsAllowance():
     drugsAllowance = drugs_contract.functions.allowance(account_address,og_contract_address).call()

@@ -1,9 +1,12 @@
-FROM python:3.9.0-buster
+FROM python:3.8.6-buster
 
 WORKDIR /app
 
-#get via 'pipp freeze > pipreqs.txt'
-COPY pipdeps.txt .
+#get via 'pip freeze > pipreqs.txt'
+COPY pipreqs.txt .
 
 RUN pip install -r pipreqs.txt
 
+COPY /src .
+
+CMD ["python", "harvest_drugs.py"]
