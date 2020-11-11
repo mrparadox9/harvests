@@ -63,12 +63,13 @@ def harvest():
         pending_rewards_ether = w3.fromWei(pending_rewards_wei,"ether")
         logging.info(f'pool {pid} pending DRUGS = {pending_rewards_ether}')
         if pending_rewards_ether > min_pool_harvest:
+            logging.info(f'processing pool {pid}')
             if pid == 0:
                 logging.info("harvesting DRUGS from HOES staking (poolid = 0)")
                 stx = og_contract.functions.leaveStaking(0).buildTransaction(getTransactionData())
                 signAndSendTransaction(stx)
             else:
-                logging.info('\tharvesting from pool')
+                logging.info(f'\tharvesting from pool {pid}')
                 tx_data = getTransactionData()
                 tx = og_contract.functions.deposit(pid,0).buildTransaction(tx_data)
                 signAndSendTransaction(tx)
@@ -96,14 +97,15 @@ def getTransactionData():
             'gasPrice' : w3.toWei(20, 'gwei')}
 
 def signAndSendTransaction(tx):
-    logging.info(tx)
+    logging.info(f'signing and sending tx{tx}')
     signed_tx = w3.eth.account.signTransaction(tx, account_pk)
     tx_hash = w3.eth.sendRawTransaction(signed_tx.rawTransaction)
     logging.info(f'tx_hash={w3.toHex(tx_hash)}')
     tx_receipt = w3.eth.waitForTransactionReceipt(tx_hash)
+    status=tx_receipt['status']
     gasUsed=w3.fromWei(tx_receipt["gasUsed"],'ether')
     blockHash=w3.toHex(tx_receipt['blockHash'])
-    logging.info(f'\tblockNumber={tx_receipt["blockNumber"]}, gasUsed={gasUsed}, blockHash={blockHash}')
+    logging.info(f'\tstatus={status}, blockNumber={tx_receipt["blockNumber"]}, gasUsed={gasUsed}, blockHash={blockHash}')
 
 if __name__ == "__main__":
     ensureDrugsAllowance()
