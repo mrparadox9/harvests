@@ -52,7 +52,7 @@ with open('./drugs.yaml') as cfg_stream:
 if og_contract_abi and og_contract_address:
     w3=Web3(Web3.HTTPProvider(web3_endpoint))
     og_contract = w3.eth.contract(address=og_contract_address,abi=og_contract_abi)
-    drugs_contract = w3.eth.contract(address=drugs_token_address,abi=drugs_token_abi)
+    drugs_contract = w3.eth.contract(address=Web3.toChecksumAddress(drugs_token_address),abi=drugs_token_abi)
 else:
     logging.info('terminal error - no contract/abi')
     sys.exit()
