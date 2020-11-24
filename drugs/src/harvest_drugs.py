@@ -39,11 +39,16 @@ with open('./drugs.yaml') as cfg_stream:
         sleep_time_seconds = cfg['sleep_time_seconds']
         min_pool_harvest = cfg['min_pool_harvest']
         min_drug_stake = cfg['min_drug_stake']
+        min_hoes_stake = cfg['min_hoes_stake']
         web3_endpoint = cfg['web3_endpoint']
         og_contract_abi = cfg['og_contract_abi']
         og_contract_address = cfg['og_contract_address']
+        sg_contract_abi = cfg['sgangster_contract_abi']
+        sg_contract_address = cfg['sgangster_contract_address']
         drugs_token_abi = cfg['drugs_token_abi']
         drugs_token_address = cfg['drugs_token_address']
+        hoes_token_abi = cfg['hoes_token_abi']
+        hoes_token_address = cfg['hoes_token_address']
     except yaml.YAMLError as err:
         logging.critical(err)
         sys.exit()
@@ -52,10 +57,14 @@ with open('./drugs.yaml') as cfg_stream:
 if og_contract_abi and og_contract_address:
     w3=Web3(Web3.HTTPProvider(web3_endpoint))
     og_contract = w3.eth.contract(address=og_contract_address,abi=og_contract_abi)
+    sg_contract = w3.eth.contract(address=sg_contract_address,abi=sg_contract_abi)
     drugs_contract = w3.eth.contract(address=drugs_token_address,abi=drugs_token_abi)
+    hoes_contract = w3.eth.contract(address=hoes_token_address,abi=hoes_token_abi)
 else:
     logging.info('terminal error - no contract/abi')
     sys.exit()
+
+
 
 def harvest():
     for pid in range(og_contract.functions.poolLength().call()):
@@ -80,7 +89,7 @@ def ensureDrugsAllowance():
     assert(drugsAllowance > 0)
 
 def stakeDrugs():
-    logging.info('staking')
+    logging.info('staking Drugs...')
     drugs_balance_wei = drugs_contract.functions.balanceOf(account_address).call()
     drugs_balance_eth = w3.fromWei(drugs_balance_wei,'ether')
     logging.info(f'\tdrugs_balance={drugs_balance_eth}')
@@ -90,6 +99,18 @@ def stakeDrugs():
         signAndSendTransaction(tx)
     else:
         logging.info('insufficient drugs to stake')
+
+def stakeHoes():
+    logging.info('staking Hoes...')
+    hoes_balance_wei = hoes_contract.functions.balanceOf(account_address).call()
+    hoes_balance_eth = w3.fromWei(hoes_balance_wei,'ether')
+    logging.info(f'\thoes_balance={hoes_balance_eth}')
+    if hoes_balance_eth > min_hoes_stake:
+        tx_data = getTransactionData()
+        tx = sg_contract.functions.deposit(hoes_balance_wei).buildTransaction(tx_data)
+        signAndSendTransaction(tx)
+    else:
+        logging.info('insufficient hoes to stake...')
 
 def getTransactionData():
     return {'nonce' : w3.eth.getTransactionCount(account_address),
@@ -108,9 +129,16 @@ def signAndSendTransaction(tx):
     logging.info(f'\tstatus={status}, blockNumber={tx_receipt["blockNumber"]}, gasUsed={gasUsed}, blockHash={blockHash}')
 
 if __name__ == "__main__":
+    logging.info('Starting Drugs and Hoes staking script...')
+    logging.info(f'Min pool harvest: {min_pool_harvest}')
+    logging.info(f'Min Drug stake: {min_drug_stake}')
+    logging.info(f'Min hoes stake: {min_hoes_stake}')
     ensureDrugsAllowance()
     while True:
+        logging.info('Starting new round [................]')
         harvest()
         stakeDrugs()
+        stakeHoes()
         logging.info(f'sleeping for {sleep_time_seconds}s')
+        logging.info('Round done [................]')
         time.sleep(sleep_time_seconds)
