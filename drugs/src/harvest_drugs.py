@@ -15,6 +15,7 @@ load_dotenv()
 sleep_time_seconds = None
 min_pool_harvest = None
 min_drug_stake = None
+min_hoes_stake = None
 web3_endpoint = None
 account_address = None
 account_pk = None
@@ -24,6 +25,12 @@ og_contract = None
 drugs_token_address = None
 drugs_token_abi = None
 drugs_contract = None
+hoes_token_abi = None
+hoes_token_address = None
+hoes_contract = None
+smart_gangster_abi = None
+smart_gangster_address = None
+smart_gangster_contract = None
 w3 = None
 log_format = '%(levelname)s:%(asctime)s: %(message)s'
 
@@ -39,11 +46,16 @@ with open('./drugs.yaml') as cfg_stream:
         sleep_time_seconds = cfg['sleep_time_seconds']
         min_pool_harvest = cfg['min_pool_harvest']
         min_drug_stake = cfg['min_drug_stake']
+        min_hoes_stake = cfg['min_hoes_stake']
         web3_endpoint = cfg['web3_endpoint']
         og_contract_abi = cfg['og_contract_abi']
         og_contract_address = cfg['og_contract_address']
         drugs_token_abi = cfg['drugs_token_abi']
         drugs_token_address = cfg['drugs_token_address']
+        hoes_token_address = cfg['hoes_token_address']
+        hoes_token_abi = cfg['hoes_token_abi']
+        smart_gangster_address = cfg['smart_gangster_address']
+        smart_gangster_abi = cfg['smart_gangster_abi']
     except yaml.YAMLError as err:
         logging.critical(err)
         sys.exit()
@@ -53,6 +65,8 @@ if og_contract_abi and og_contract_address:
     w3=Web3(Web3.HTTPProvider(web3_endpoint))
     og_contract = w3.eth.contract(address=og_contract_address,abi=og_contract_abi)
     drugs_contract = w3.eth.contract(address=Web3.toChecksumAddress(drugs_token_address),abi=drugs_token_abi)
+    hoes_contract = w3.eth.contract(address=Web3.toChecksumAddress(hoes_token_address),abi=hoes_token_abi)
+    smart_gangster_contract = w3.eth.contract(address=Web3.toChecksumAddress(smart_gangster_address),abi=smart_gangster_abi)
 else:
     logging.info('terminal error - no contract/abi')
     sys.exit()
@@ -80,7 +94,7 @@ def ensureDrugsAllowance():
     assert(drugsAllowance > 0)
 
 def stakeDrugs():
-    logging.info('staking')
+    logging.info('staking drugs')
     drugs_balance_wei = drugs_contract.functions.balanceOf(account_address).call()
     drugs_balance_eth = w3.fromWei(drugs_balance_wei,'ether')
     logging.info(f'\tdrugs_balance={drugs_balance_eth}')
@@ -90,6 +104,19 @@ def stakeDrugs():
         signAndSendTransaction(tx)
     else:
         logging.info('insufficient drugs to stake')
+
+def stakeHoes():
+    logging.info('staking hoes')
+    hoes_balance_wei = hoes_contract.functions.balanceOf(account_address).call()
+    hoes_balance_eth = w3.fromWei(hoes_balance_wei,'ether')
+    logging.info(f'\thoes_balance={hoes_balance_eth}')
+    if hoes_balance_eth > min_hoes_stake:
+        tx_data = getTransactionData()
+        tx = smart_gangster_contract.functions.deposit(hoes_balance_wei).buildTransaction(tx_data)
+        signAndSendTransaction(tx)
+    else:
+        logging.info('Insuffcient hoes to stake')
+
 
 def getTransactionData():
     return {'nonce' : w3.eth.getTransactionCount(account_address),
@@ -112,5 +139,6 @@ if __name__ == "__main__":
     while True:
         harvest()
         stakeDrugs()
+        stakeHoes()
         logging.info(f'sleeping for {sleep_time_seconds}s')
         time.sleep(sleep_time_seconds)
