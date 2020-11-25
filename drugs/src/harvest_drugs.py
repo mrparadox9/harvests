@@ -40,15 +40,20 @@ with open('./drugs.yaml') as cfg_stream:
         min_pool_harvest = cfg['min_pool_harvest']
         min_drug_stake = cfg['min_drug_stake']
         min_hoes_stake = cfg['min_hoes_stake']
+        min_mooDrugsGuns_stake = cfg['min_mooDrugsGuns_stake']
         web3_endpoint = cfg['web3_endpoint']
         og_contract_abi = cfg['og_contract_abi']
         og_contract_address = cfg['og_contract_address']
         sg_contract_abi = cfg['sgangster_contract_abi']
         sg_contract_address = cfg['sgangster_contract_address']
+        mooDrugsGuns_contract_address = cfg['mooDrugsGuns_contract_address']
+        mooDrugsGuns_contract_abi = cfg['mooDrugsGuns_contract_abi']
         drugs_token_abi = cfg['drugs_token_abi']
         drugs_token_address = cfg['drugs_token_address']
         hoes_token_abi = cfg['hoes_token_abi']
         hoes_token_address = cfg['hoes_token_address']
+        enable_hoes = cfg['enable_hoes']
+        enable_mooDrugsGuns = cfg['enable_mooDrugsGuns']
     except yaml.YAMLError as err:
         logging.critical(err)
         sys.exit()
@@ -60,6 +65,7 @@ if og_contract_abi and og_contract_address:
     sg_contract = w3.eth.contract(address=sg_contract_address,abi=sg_contract_abi)
     drugs_contract = w3.eth.contract(address=drugs_token_address,abi=drugs_token_abi)
     hoes_contract = w3.eth.contract(address=hoes_token_address,abi=hoes_token_abi)
+    mooDrugsGuns_contract = w3.eth.contract(address=mooDrugsGuns_contract_address,abi=mooDrugsGuns_contract_abi)
 else:
     logging.info('terminal error - no contract/abi')
     sys.exit()
@@ -88,6 +94,12 @@ def ensureDrugsAllowance():
     logging.info(f'drugsAllowance={drugsAllowance}')
     assert(drugsAllowance > 0)
 
+def ensureMooDrugsGunsAllowance():
+    logging.info('enter moo allowance')
+    mooDrugsGunsAllowance = drugs_contract.functions.allowance(account_address,mooDrugsGuns_contract_address).call()
+    logging.info(f'mooDrugsGunsAllowance={mooDrugsGunsAllowance}')
+    assert(mooDrugsGunsAllowance > 0)
+
 def stakeDrugs():
     logging.info('staking Drugs...')
     drugs_balance_wei = drugs_contract.functions.balanceOf(account_address).call()
@@ -112,9 +124,21 @@ def stakeHoes():
     else:
         logging.info('insufficient hoes to stake...')
 
+def stakeMooDrugsGuns():
+    logging.info('staking mooDrugsGuns at Beefy...')
+    mooDrugsGuns_balance_wei = drugs_contract.functions.balanceOf(account_address).call()
+    mooDrugsGuns_balance_eth = w3.fromWei(mooDrugsGuns_balance_wei,'ether')
+    logging.info(f'\tmooDrugsGuns_balance={mooDrugsGuns_balance_eth}')
+    if mooDrugsGuns_balance_eth > min_mooDrugsGuns_stake:
+        tx_data = getTransactionData()
+        tx = mooDrugsGuns_contract.functions.depositAll().buildTransaction(tx_data)
+        signAndSendTransaction(tx)
+    else:
+        logging.info('insufficient mooDrugsGuns to stake...')
+
 def getTransactionData():
     return {'nonce' : w3.eth.getTransactionCount(account_address),
-            'gas' : 200000,
+            'gas' : 800000,
             'gasPrice' : w3.toWei(20, 'gwei')}
 
 def signAndSendTransaction(tx):
@@ -133,12 +157,23 @@ if __name__ == "__main__":
     logging.info(f'Min pool harvest: {min_pool_harvest}')
     logging.info(f'Min Drug stake: {min_drug_stake}')
     logging.info(f'Min hoes stake: {min_hoes_stake}')
+    logging.info(f'Min mooDrugsGuns stake: {min_mooDrugsGuns_stake}')
     ensureDrugsAllowance()
+    if enable_mooDrugsGuns == True:
+        logging.info('mooDrugsGuns staking enabled')
+        ensureMooDrugsGunsAllowance()
     while True:
         logging.info('Starting new round [................]')
         harvest()
-        stakeDrugs()
-        stakeHoes()
+        if enable_mooDrugsGuns == True:
+            logging.info('Sleep for 5 seconds to wait for blockchain to catch up')
+            time.sleep(5)    
+            stakeMooDrugsGuns()
+        else:
+            stakeDrugs()
+            if enable_hoes == True:
+                stakeHoes()
         logging.info(f'sleeping for {sleep_time_seconds}s')
         logging.info('Round done [................]')
+        logging.info('')
         time.sleep(sleep_time_seconds)
