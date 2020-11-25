@@ -15,6 +15,8 @@ load_dotenv()
 sleep_time_seconds = None
 min_pool_harvest = None
 min_drug_stake = None
+min_hoes_stake = None
+min_mooDrugsGuns_stake = None
 web3_endpoint = None
 account_address = None
 account_pk = None
@@ -24,6 +26,14 @@ og_contract = None
 drugs_token_address = None
 drugs_token_abi = None
 drugs_contract = None
+sg_contract_abi = None
+sg_contract_address = None
+hoes_token_abi = None
+hoes_token_address = None
+mooDrugsGuns_contract_abi = None
+mooDrugsGuns_contract_address = None
+enable_hoes = None
+enable_mooDrugsGuns = None
 w3 = None
 log_format = '%(levelname)s:%(asctime)s: %(message)s'
 
@@ -70,8 +80,6 @@ else:
     logging.info('terminal error - no contract/abi')
     sys.exit()
 
-
-
 def harvest():
     for pid in range(og_contract.functions.poolLength().call()):
         pending_rewards_wei = og_contract.functions.pendingDrugs(pid, account_address).call()
@@ -95,7 +103,6 @@ def ensureDrugsAllowance():
     assert(drugsAllowance > 0)
 
 def ensureMooDrugsGunsAllowance():
-    logging.info('enter moo allowance')
     mooDrugsGunsAllowance = drugs_contract.functions.allowance(account_address,mooDrugsGuns_contract_address).call()
     logging.info(f'mooDrugsGunsAllowance={mooDrugsGunsAllowance}')
     assert(mooDrugsGunsAllowance > 0)
