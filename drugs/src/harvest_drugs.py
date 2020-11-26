@@ -34,6 +34,7 @@ mooDrugsGuns_contract_abi = None
 mooDrugsGuns_contract_address = None
 enable_hoes = None
 enable_mooDrugsGuns = None
+hoes_contract = None
 w3 = None
 log_format = '%(levelname)s:%(asctime)s: %(message)s'
 
@@ -108,6 +109,7 @@ def ensureMooDrugsGunsAllowance():
     assert(mooDrugsGunsAllowance > 0)
 
 def stakeDrugs():
+
     logging.info('staking Drugs...')
     drugs_balance_wei = drugs_contract.functions.balanceOf(account_address).call()
     drugs_balance_eth = w3.fromWei(drugs_balance_wei,'ether')
@@ -172,6 +174,7 @@ if __name__ == "__main__":
     while True:
         logging.info('Starting new round [................]')
         harvest()
+
         if enable_mooDrugsGuns == True:
             logging.info('Sleep for 5 seconds to wait for blockchain to catch up')
             time.sleep(5)    
@@ -180,6 +183,7 @@ if __name__ == "__main__":
             stakeDrugs()
             if enable_hoes == True:
                 stakeHoes()
+
         logging.info(f'sleeping for {sleep_time_seconds}s')
         logging.info('Round done [................]')
         logging.info('')
